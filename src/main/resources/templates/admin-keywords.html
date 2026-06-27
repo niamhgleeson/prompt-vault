@@ -25,8 +25,9 @@
 <table border="1">
     <tr>
         <th>ID</th>
-        <th>keyword</th>
+        <th>Keyword</th>
         <th>Delete</th>
+        <th>Edit</th>
     </tr>
     <tr th:each="keyword : ${keywords}">
         <td th:text="${keyword.id}"></td>
@@ -36,6 +37,11 @@
 
                 <button type="submit">Delete</button>
             </form>
+        </td>
+        <td>
+            <a th:href="@{'/admin-keywords-edit-page/' + ${keyword.id}}">
+                Edit
+            </a>
         </td>
     </tr>
 </table>
