@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Users</title>
+</head>
+<body>
+
+<h1>Manage Users</h1>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Enabled</th>
+        <th>Actions</th>
+    </tr>
+
+    <tr th:each="user : ${users}">
+        <td th:text="${user.id}"></td>
+        <td th:text="${user.username}"></td>
+        <td th:text="${user.email}"></td>
+        <td th:text="${user.role}"></td>
+        <td th:text="${user.enabled}"></td>
+        <td>
+
+            <div th:if="${user.role != 'ADMIN'}">
+
+                <form th:action="@{'/web/users/' + ${user.id} + '/disable'}" method="post">
+                    <button type="submit">Disable</button>
+                </form>
+
+                <form th:action="@{'/web/users/' + ${user.id} + '/enable'}" method="post">
+                    <button type="submit">Enable</button>
+                </form>
+
+            </div>
+
+            <span th:if="${user.role == 'ADMIN'}">
+        N/A
+    </span>
+        </td>
+    </tr>
+</table>
+
+<br>
+<a href="/admin-dashboard">Back</a>
+
+</body>
+</html>

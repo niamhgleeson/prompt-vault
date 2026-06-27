@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Categories</title>
+</head>
+<body>
+
+<h1>Manage Categories</h1>
+
+<form action="/web/categories" method="post">
+    <input type="text" name="name" placeholder="Category name">
+    <input type="text" name="description" placeholder="Description">
+    <button type="submit">Add Category</button>
+</form>
+
+<br>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Description</th>
+    </tr>
+
+    <tr th:each="category : ${categories}">
+        <td th:text="${category.id}"></td>
+        <td th:text="${category.name}"></td>
+        <td th:text="${category.description}"></td>
+    </tr>
+</table>
+
+<br>
+<a href="/admin-dashboard">Back</a>
+
+</body>
+</html>

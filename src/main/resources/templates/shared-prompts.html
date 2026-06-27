@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Shared Prompts</title>
+</head>
+<body>
+
+<h1>Shared Prompts</h1>
+
+<table border="1">
+    <tr>
+        <th>Title</th>
+        <th>Prompt Text</th>
+        <th>Category</th>
+        <th>Owner</th>
+    </tr>
+
+    <tr th:each="prompt : ${prompts}">
+        <td th:text="${prompt.title}"></td>
+        <td th:text="${prompt.promptText}"></td>
+        <td th:text="${prompt.category != null ? prompt.category.name : 'No category'}"></td>
+        <td th:text="${prompt.owner != null ? prompt.owner.username : 'No owner'}"></td>
+    </tr>
+</table>
+
+<br>
+<a href="/user-dashboard">Back to dashboard</a>
+
+</body>
+</html>

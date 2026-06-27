@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Flagged Prompts</title>
+</head>
+<body>
+
+<h1>Flagged Prompts</h1>
+
+<table border="1">
+    <tr>
+        <th>Prompt Title</th>
+        <th>Owner</th>
+        <th>Category</th>
+        <th>Flagged Keyword</th>
+        <th>Submission Date</th>
+    </tr>
+
+    <tr th:each="prompt : ${flaggedPrompts}">
+        <td th:text="${prompt.title}"></td>
+        <td th:text="${prompt.owner}"></td>
+        <td th:text="${prompt.category}"></td>
+        <td th:text="${prompt.response}"></td>
+        <td th:text="${prompt.date}"></td>
+    </tr>
+</table>
+
+<br>
+
+<a href="/admin-dashboard">Back to dashboard</a>
+
+</body>
+</html>

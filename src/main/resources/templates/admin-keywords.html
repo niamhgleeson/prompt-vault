@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Policy keywords</title>
+</head>
+<body>
+
+<h1>Manage Policy keywords</h1>
+
+<form action="/web/keywords" method="post">
+    <label>keyword</label>
+    <br>
+    <input
+            type="text"
+            name="keyword">
+
+    <br><br>
+    <button type="submit">
+        Add keyword
+    </button>
+</form>
+<br>
+
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>keyword</th>
+        <th>Delete</th>
+    </tr>
+    <tr th:each="keyword : ${keywords}">
+        <td th:text="${keyword.id}"></td>
+        <td th:text="${keyword.keyword}"></td>
+        <td>
+            <form th:action="@{'/web/keywords/' + ${keyword.id} + '/delete'}" method="post">
+
+                <button type="submit">Delete</button>
+            </form>
+        </td>
+    </tr>
+</table>
+<br>
+
+<a href="/admin-dashboard">Back to Dashboard</a>
+</body>
+</html>

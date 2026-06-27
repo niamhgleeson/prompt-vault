@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Prompt</title>
+</head>
+<body>
+
+<h1>Create Prompt</h1>
+
+<form action="/web/prompts" method="post">
+
+    <label>Title</label><br>
+    <input type="text" name="title"><br><br>
+
+    <label>Prompt Text</label><br>
+    <textarea name="promptText"></textarea><br><br>
+
+    <label>Visibility</label><br>
+    <select name="visibility">
+        <option value="PRIVATE">Private</option>
+        <option value="SHARED">Shared</option>
+    </select><br><br>
+
+    <label>Category</label><br>
+
+    <select name="categoryId">
+        <option
+                th:each="category : ${categories}"
+                th:value="${category.id}"
+                th:text="${category.name}">
+        </option>
+    </select>
+
+    <button type="submit">Create Prompt</button>
+
+</form>
+
+<br>
+<a href="/user-dashboard">Back</a>
+
+</body>
+</html>
