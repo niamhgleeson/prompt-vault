@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Edit Policy Keyword</title>
+</head>
+<body>
+
+<h1>Edit Policy Keyword</h1>
+
+<form th:action="@{'/web/keywords/' + ${keyword.id} + '/edit'}" method="post">
+
+  <label>Keyword</label><br>
+  <input type="text" name="keyword" th:value="${keyword.keyword}">
+
+  <br><br>
+
+  <button type="submit">Save Changes</button>
+
+</form>
+
+<br>
+
+<a href="/admin-keywords-page">Back</a>
+
+</body>
+</html>

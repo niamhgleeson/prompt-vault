@@ -483,4 +483,39 @@ public class PageController {
         return "redirect:/login-page";
     }
 
+    @GetMapping("/admin-keywords-edit-page/{id}")
+    public String editKeywordPage(
+            @PathVariable Long id,
+            Model model
+    ) {
+        PolicyKeyword keyword =
+                policyKeywordService.findById(id);
+
+        model.addAttribute(
+                "keyword",
+                keyword
+        );
+
+        return "admin-keyword-edit";
+    }
+
+    @PostMapping("/web/keywords/{id}/edit")
+    public String editKeywordFromPage(
+            @PathVariable Long id,
+            @RequestParam String keyword
+    ) {
+        Long adminId = 8L;
+
+        User admin =
+                userService.findById(adminId);
+
+        policyKeywordService.update(
+                id,
+                keyword,
+                admin
+        );
+
+        return "redirect:/admin-keywords-page";
+    }
+
 }

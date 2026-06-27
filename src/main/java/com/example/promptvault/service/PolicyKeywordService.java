@@ -88,4 +88,27 @@ public class PolicyKeywordService {
 
     }
 
+    public PolicyKeyword update(
+            Long id,
+            String newKeyword,
+            User admin
+    ) {
+        if (!"ADMIN".equals(admin.getRole())) {
+            throw new RuntimeException("Admin only");
+        }
+
+        PolicyKeyword existing =
+                repository.findById(id)
+                        .orElseThrow();
+
+        existing.setKeyword(newKeyword);
+
+        return repository.save(existing);
+    }
+
+    public PolicyKeyword findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow();
+    }
+
 }
