@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Submission History</title>
+</head>
+<body>
+
+<h1>Submission History</h1>
+
+<table border="1">
+    <tr>
+        <th>Prompt Title</th>
+        <th>Submission Date</th>
+        <th>Simulated AI Response</th>
+    </tr>
+
+    <tr th:each="item : ${history}">
+        <td th:text="${item.promptTitle}"></td>
+        <td th:text="${item.submissionDate}"></td>
+        <td th:text="${item.simulatedResponse}"></td>
+    </tr>
+</table>
+
+<br>
+
+<a href="/user-dashboard">Back to dashboard</a>
+
+</body>
+</html>
