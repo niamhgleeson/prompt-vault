@@ -18,4 +18,6 @@ public interface PromptRepository
     List<Prompt>
     findByVisibility(String visibility);
 
+    boolean existsByCategoryId(Long categoryId);
+
 }
