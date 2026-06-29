@@ -518,4 +518,65 @@ public class PageController {
         return "redirect:/admin-keywords-page";
     }
 
+    @PostMapping("/web/categories/{id}/delete")
+    public String deleteCategory(
+            @PathVariable Long id,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            promptCategoryService.delete(id);
+
+            redirectAttributes.addFlashAttribute(
+                    "message",
+                    "Category deleted successfully."
+            );
+        }
+        catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    e.getMessage()
+            );
+        }
+
+        return "redirect:/admin-categories-page";
+    }
+
+    @GetMapping("/edit-category-page/{id}")
+    public String editCategoryPage(
+            @PathVariable Long id,
+            Model model
+    ) {
+
+        PromptCategory category =
+                promptCategoryService.findById(id);
+
+        model.addAttribute(
+                "category",
+                category
+        );
+
+        return "edit-category";
+    }
+
+    @PostMapping("/web/categories/edit/{id}")
+    public String updateCategory(
+            @PathVariable Long id,
+            @RequestParam String name,
+            @RequestParam String description
+    ) {
+
+        PromptCategory category =
+                new PromptCategory();
+
+        category.setName(name);
+        category.setDescription(description);
+
+        promptCategoryService.update(
+                id,
+                category
+        );
+
+        return "redirect:/admin-categories-page";
+    }
+
 }

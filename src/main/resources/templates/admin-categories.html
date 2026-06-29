@@ -7,6 +7,9 @@
 
 <h1>Manage Categories</h1>
 
+<p th:if="${message}" th:text="${message}" style="color:green;"></p>
+<p th:if="${error}" th:text="${error}" style="color:red;"></p>
+
 <form action="/web/categories" method="post">
     <input type="text" name="name" placeholder="Category name">
     <input type="text" name="description" placeholder="Description">
@@ -20,12 +23,23 @@
         <th>ID</th>
         <th>Name</th>
         <th>Description</th>
+        <th>Actions</th>
     </tr>
 
     <tr th:each="category : ${categories}">
         <td th:text="${category.id}"></td>
         <td th:text="${category.name}"></td>
         <td th:text="${category.description}"></td>
+        <td>
+            <a th:href="@{'/edit-category-page/' + ${category.id}}">
+                Edit
+            </a>
+            <br><br>
+            <form th:action="@{'/web/categories/' + ${category.id} + '/delete'}"
+                    method="post">
+                <button type="submit">Delete</button>
+            </form>
+        </td>
     </tr>
 </table>
 
