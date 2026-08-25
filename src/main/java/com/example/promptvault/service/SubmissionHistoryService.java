@@ -12,14 +12,11 @@ import com.example.promptvault.dto.FlaggedPromptResponse;
 @Service
 public class SubmissionHistoryService {
     private SubmissionHistoryRepository repository;
-    private UserService userService;
 
     public SubmissionHistoryService(
-            SubmissionHistoryRepository repository,
-            UserService userService
+            SubmissionHistoryRepository repository
     ) {
         this.repository= repository;
-        this.userService = userService;
     }
 
     public SubmissionHistory create(
@@ -69,24 +66,17 @@ public class SubmissionHistoryService {
     }
 
     public List<SubmissionHistory>
-    getFlagged(Long adminId) {
-        User admin = userService.findById(adminId);
-
-        if (!admin.getRole().equals("ADMIN")) {
-
-            throw new RuntimeException("Only admins can view flagged prompts");
-
-        }
+    getFlagged() {
 
         return repository.findByFlagged(true);
 
     }
 
     public List<FlaggedPromptResponse>
-    getFlaggedResponses(Long adminId) {
+    getFlaggedResponses() {
 
         List<SubmissionHistory>
-                history = getFlagged(adminId);
+                history = getFlagged();
 
         return history
                 .stream()

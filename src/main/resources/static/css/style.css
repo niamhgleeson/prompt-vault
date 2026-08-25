@@ -1,0 +1,15 @@
+.error-message {
+    color: red;
+}
+
+.success-message {
+    color: green;
+}
+
+.warning-message {
+    color: red;
+}
+
+.info-message {
+    color: blue;
+}

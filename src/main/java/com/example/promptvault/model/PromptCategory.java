@@ -1,6 +1,8 @@
 package com.example.promptvault.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name="prompt_categories")
@@ -12,8 +14,12 @@ public class PromptCategory {
     )
     private Long id;
 
+    @NotBlank
+    @Size(max = 100)
     private String name;
 
+    @NotBlank
+    @Size(max = 500)
     private String description;
 
     public PromptCategory() {

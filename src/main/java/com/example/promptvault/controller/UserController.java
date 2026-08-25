@@ -36,15 +36,11 @@ public class UserController {
     @PutMapping("/{id}/disable")
     public User disable(
             @PathVariable
-            Long id,
-
-            @RequestParam
-            Long adminId
+            Long id
     ) {
 
         return userService
                 .setEnabled(
-                        adminId,
                         id,
                         false
                 );
@@ -54,15 +50,11 @@ public class UserController {
     @PutMapping("/{id}/enable")
     public User enable(
             @PathVariable
-            Long id,
-
-            @RequestParam
-            Long adminId
+            Long id
     ) {
 
         return userService
                 .setEnabled(
-                        adminId,
                         id,
                         true
                 );

@@ -2,17 +2,22 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>User Prompts</title>
+
+    <link
+            rel="stylesheet"
+            th:href="@{/css/style.css}">
 </head>
 <body>
 
 <h1>User Prompts</h1>
 
-<p th:if="${warning}" th:text="${warning}" style="color:red;"></p>
-<p th:if="${message}" th:text="${message}" style="color:green;"></p>
+<p th:if="${warning}" th:text="${warning}" class="warning-message"></p>
+<p th:if="${error}" th:text="${error}" class="error-message"></p>
+<p th:if="${message}" th:text="${message}" class="success-message"></p>
 
 <p th:if="${simulatedResponse}"
    th:text="'Simulated AI Response: ' + ${simulatedResponse}"
-   style="color:blue;">
+   class="info-message">
 </p>
 
 <table border="1">

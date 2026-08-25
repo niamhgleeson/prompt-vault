@@ -2,17 +2,32 @@ package com.example.promptvault.config;
 
 import com.example.promptvault.model.User;
 import com.example.promptvault.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class DataSeeder {
 
-    private BCryptPasswordEncoder
-            encoder =
-            new BCryptPasswordEncoder();
+    @Value("${app.admin.username}")
+    private String adminUsername;
+
+    @Value("${app.admin.password}")
+    private String adminPassword;
+
+    private final PasswordEncoder encoder;
+
+    public DataSeeder(
+            PasswordEncoder encoder
+    ) {
+
+        this.encoder = encoder;
+
+    }
+
     @Bean
     CommandLineRunner seedData(
             UserRepository userRepository
@@ -23,7 +38,7 @@ public class DataSeeder {
             if (
                     userRepository
                             .findByUsername(
-                                    "admin"
+                                    adminUsername
                             )
                             .isEmpty()
             ) {
@@ -40,7 +55,7 @@ public class DataSeeder {
                 );
 
                 admin.setUsername(
-                        "admin"
+                        adminUsername
                 );
 
                 admin.setEmail(
@@ -49,7 +64,7 @@ public class DataSeeder {
 
                 admin.setPassword(
                         encoder.encode(
-                                "REDACTED"
+                                adminPassword
                         )
                 );
 
@@ -61,8 +76,9 @@ public class DataSeeder {
                         true
                 );
 
-                userRepository
-                        .save(admin);
+                userRepository.save(
+                        admin
+                );
 
             }
 

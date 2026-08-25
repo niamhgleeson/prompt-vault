@@ -1,7 +1,7 @@
 package com.example.promptvault.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.*;
 
 @Entity
 @Table(name="policy_keywords")
@@ -14,6 +14,8 @@ public class PolicyKeyword {
     private Long id;
 
     @NotBlank
+    @Size(max = 100)
+    @Column(unique = true)
     private String keyword;
 
     public PolicyKeyword() {
