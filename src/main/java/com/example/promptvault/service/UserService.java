@@ -2,89 +2,67 @@ package com.example.promptvault.service;
 
 import com.example.promptvault.model.User;
 import com.example.promptvault.repository.UserRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import java.util.*;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.*;
 
 @Service
 public class UserService {
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder encoder;
 
-    private BCryptPasswordEncoder
-            encoder = new BCryptPasswordEncoder();
+    public UserService(
+            UserRepository userRepository,
+            PasswordEncoder encoder
+    ) {
 
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+        this.userRepository =
+                userRepository;
+
+        this.encoder =
+                encoder;
+
     }
 
     public User register(User user) {
-        //adds defaults to the registered user
+
         user.setRole("USER");
-
         user.setEnabled(true);
-
-        user.setPassword(encoder.encode(user.getPassword()));
+        user.setPassword(
+                encoder.encode(user.getPassword())
+        );
 
         return userRepository.save(user);
-
     }
 
-    public User login(
-            String username,
-            String password
+    public User findById(Long id
     ) {
-
-        User user = userRepository
-                        .findByUsername(username)
-                        .orElseThrow();
-        if(!user.isEnabled()) {
-            throw new RuntimeException("Your account has been disabled. Please contact an administrator");
-        }
-
-        boolean matches =
-                encoder.matches(
-                        password,
-                        user.getPassword()
-                );
-
-        if (!matches) {
-            throw new RuntimeException("Invalid password");
-
-        }
-
-        return user;
-
-    }
-
-    public User findById(Long id) {
 
         return userRepository
                 .findById(id)
                 .orElseThrow();
 
     }
-    public List<User>
-    getAll() {
+
+    public User findByUsername(String username) {
+
+        return userRepository
+                .findByUsername(username)
+                .orElseThrow();
+
+    }
+
+    public List<User> getAll() {
+
         return userRepository.findAll();
 
     }
 
     public User setEnabled(
-            Long adminId,
             Long userId,
             boolean enabled
     ) {
-
-        User admin =
-                findById(adminId);
-
-        if (!"ADMIN".equals(admin.getRole())) {
-            throw new RuntimeException(
-                    "Admin only"
-            );
-        }
 
         User user =
                 findById(userId);

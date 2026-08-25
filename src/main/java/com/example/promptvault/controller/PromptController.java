@@ -2,7 +2,10 @@ package com.example.promptvault.controller;
 
 import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.SubmissionHistory;
+import com.example.promptvault.model.User;
 import com.example.promptvault.service.PromptService;
+import com.example.promptvault.service.UserService;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
@@ -14,34 +17,69 @@ import java.util.*;
 public class PromptController {
 
     private PromptService promptService;
+    private UserService userService;
 
-    public PromptController(PromptService promptService) {
+    public PromptController(
+            PromptService promptService,
+            UserService userService
+    ) {
 
         this.promptService = promptService;
+        this.userService = userService;
     }
 
     @PostMapping
     public Prompt createPrompt(
             @Valid
-            @RequestBody
-            Prompt prompt) {
+            @RequestBody Prompt prompt,
+            Authentication authentication
+    ) {
 
-        return promptService.createPrompt(prompt);
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
+
+        prompt.setOwner(user);
+
+        return promptService.createPrompt(
+                prompt
+        );
     }
 
     @PostMapping("/submit/{id}")
-    public SubmissionHistory submit(@PathVariable Long id) {
+    public SubmissionHistory submit(
+            @PathVariable
+            Long id,
 
-        return promptService.submitPrompt(id);
+            Authentication authentication
+    ) {
+
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
+
+        return promptService.submitPrompt(
+                id,
+                user.getId()
+        );
 
     }
 
-    @GetMapping("/user/{id}")
-    public List<Prompt>
-    userPrompts(@PathVariable Long id) {
+    @GetMapping("/mine")
+    public List<Prompt> userPrompts(
+            Authentication authentication
+    ) {
 
-        return promptService.getUserPrompts(id);
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
 
+        return promptService.getUserPrompts(
+                user.getId()
+        );
     }
 
     @GetMapping("/shared")
@@ -54,36 +92,38 @@ public class PromptController {
 
     @PutMapping("/{id}")
     public Prompt update(
-
-            @PathVariable
-            Long id,
-
-            @RequestParam
-            Long userId,
-
-            @Valid
-            @RequestBody
-            Prompt prompt
-
+            @PathVariable Long id,
+            @Valid @RequestBody Prompt prompt,
+            Authentication authentication
     ) {
 
-        return promptService.updatePrompt(id, userId, prompt);
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
 
+        return promptService.updatePrompt(
+                id,
+                user.getId(),
+                prompt
+        );
     }
 
     @DeleteMapping("/{id}")
     public void delete(
-
-            @PathVariable
-            Long id,
-
-            @RequestParam
-            Long userId
-
+            @PathVariable Long id,
+            Authentication authentication
     ) {
 
-        promptService.deletePrompt(id, userId);
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
 
+        promptService.deletePrompt(
+                id,
+                user.getId()
+        );
     }
 
 }

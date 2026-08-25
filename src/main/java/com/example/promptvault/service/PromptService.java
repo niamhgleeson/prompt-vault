@@ -52,18 +52,21 @@ public class PromptService {
                 promptRepository.findById(promptId)
                         .orElseThrow();
 
-        if (!existing.getOwner().getId().equals(userId)) {
+        if (
+                existing.getOwner() == null ||
+                        !existing.getOwner()
+                                .getId()
+                                .equals(userId)
+        ) {
+
             throw new RuntimeException("You can only edit your own prompts");
+
         }
 
         existing.setTitle(updated.getTitle());
-
         existing.setPromptText(updated.getPromptText());
-
         existing.setVisibility(updated.getVisibility());
-
         existing.setCategory(updated.getCategory());
-
         return promptRepository.save(existing);
 
     }
@@ -74,9 +77,16 @@ public class PromptService {
                 promptRepository.findById(promptId)
                         .orElseThrow();
 
-        if (!existing.getOwner().getId().equals(userId)) {
+        if (
+                existing.getOwner() == null ||
+                        !existing.getOwner()
+                                .getId()
+                                .equals(userId)
+        ) {
 
-            throw new RuntimeException("You can only delete your own prompts");
+            throw new RuntimeException(
+                    "You can only delete your own prompts"
+            );
 
         }
 
@@ -84,9 +94,30 @@ public class PromptService {
 
     }
 
-    public SubmissionHistory submitPrompt(Long promptId) {
+    public SubmissionHistory submitPrompt(
+            Long promptId,
+            Long userId
+    ) {
         String response;
-        Prompt prompt = promptRepository.findById(promptId).orElseThrow();
+
+        Prompt prompt =
+                promptRepository
+                        .findById(promptId)
+                        .orElseThrow();
+
+        if (
+                prompt.getOwner() == null ||
+                !prompt.getOwner()
+                        .getId()
+                        .equals(userId)
+        ) {
+
+            throw new RuntimeException(
+                    "You can only submit your own prompts."
+            );
+
+        }
+
         String keyword =
                 keywordService.getMatchedKeyword(prompt.getPromptText());
         boolean flagged = keyword != null;
@@ -114,6 +145,32 @@ public class PromptService {
                 flagged,
                 keyword
         );
+    }
+
+    public Prompt getUserPromptById(
+            Long promptId,
+            Long userId
+    ) {
+
+        Prompt prompt =
+                promptRepository
+                        .findById(promptId)
+                        .orElseThrow();
+
+        if (
+                prompt.getOwner() == null ||
+                        !prompt.getOwner()
+                                .getId()
+                                .equals(userId)
+        ) {
+
+            throw new RuntimeException(
+                    "You can only access your own prompts."
+            );
+
+        }
+
+        return prompt;
     }
 
     public Prompt findById(Long id) {

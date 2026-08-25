@@ -6,44 +6,53 @@ import com.example.promptvault.dto.FlaggedPromptResponse;
 import com.example.promptvault.dto.SubmissionHistoryResponse;
 import org.springframework.web.bind.annotation.*;
 import com.example.promptvault.model.SubmissionHistory;
+import com.example.promptvault.model.User;
 import com.example.promptvault.service.SubmissionHistoryService;
+import com.example.promptvault.service.UserService;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/history")
 public class SubmissionHistoryController {
 
     private SubmissionHistoryService service;
+    private UserService userService;
 
     public SubmissionHistoryController(
 
-            SubmissionHistoryService service
+            SubmissionHistoryService service,
+            UserService userService
 
     ) {
 
         this.service = service;
+        this.userService = userService;
 
     }
 
-    @GetMapping("/user/{id}")
-    public List<SubmissionHistoryResponse> history(
+    @GetMapping("/mine")
+    public List<SubmissionHistoryResponse> getMine(
 
-            @PathVariable
-            Long id
+            Authentication authentication
 
     ) {
 
-        return service.getUserHistory(id);
+        User user =
+                userService.findByUsername(
+                        authentication.getName()
+                );
+
+        return service.getUserHistory(
+                user.getId()
+        );
 
     }
 
     @GetMapping("/flagged")
     public List<FlaggedPromptResponse>
-    flagged(
-            @RequestParam
-            Long adminId
-    ) {
+    flagged() {
 
-        return service.getFlaggedResponses(adminId);
+        return service.getFlaggedResponses();
 
     }
 

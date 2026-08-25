@@ -6,6 +6,10 @@
 
     <title>PromptVault Login</title>
 
+    <link
+            rel="stylesheet"
+            th:href="@{/css/style.css}">
+
 </head>
 
 <body>
@@ -13,44 +17,47 @@
 <h1>PromptVault</h1>
 
 <p
-        th:if="${error}"
-        th:text="${error}"
-        style="color:red;">
+        th:if="${param.error}"
+        class="error-message">
+
+    Invalid username/password or the account is disabled.
+
+</p>
+
+<p
+        th:if="${param.logout}"
+        class="success-message">
+
+    You have been logged out successfully.
+
 </p>
 
 <h2>Login</h2>
 
-<form action="/login" method="post">
+<form th:action="@{/login}" method="post">
 
-    <label>
-
-        Username
-
-    </label>
-
-    <br>
-
-    <input type="text" name="username">
-
-    <br><br>
-
-    <label>
-
-        Password
-
-    </label>
-
+    <label>Username</label>
     <br>
 
     <input
-            type="password" name="password">
+            type="text"
+            name="username"
+            required>
+
+    <br><br>
+
+    <label>Password</label>
+    <br>
+
+    <input
+            type="password"
+            name="password"
+            required>
 
     <br><br>
 
     <button type="submit">
-
         Login
-
     </button>
 
 </form>

@@ -18,26 +18,29 @@ public class User {
     private Long id;
 
     @NotBlank
+    @Size(max = 100)
     private String name;
 
     @NotBlank
+    @Size(max = 100)
     private String surname;
 
-    //to add extra rules, you need to insert @Column, so because we want it to be unique, it's there.
     @NotBlank
-    @Column(unique=true)
+    @Size(min = 3, max = 100)
+    @Column(unique = true)
     private String username;
 
     @Email
     @NotBlank
-    @Column(unique=true)
+    @Size(max = 255)
+    @Column(unique = true)
     @JsonIgnore
     private String email;
 
     @NotBlank
+    @Size(min = 8, max = 100)
     @JsonProperty(
-            access =
-                    JsonProperty.Access.WRITE_ONLY
+            access = JsonProperty.Access.WRITE_ONLY
     )
     private String password;
 
