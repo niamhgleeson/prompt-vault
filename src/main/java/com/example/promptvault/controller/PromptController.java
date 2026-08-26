@@ -3,21 +3,24 @@ package com.example.promptvault.controller;
 import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.SubmissionHistory;
 import com.example.promptvault.model.User;
+
 import com.example.promptvault.service.PromptService;
 import com.example.promptvault.service.UserService;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+
 import jakarta.validation.Valid;
 
-import java.util.*;
+import org.springframework.security.core.Authentication;
 
-//handles http requests
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/prompts")
 public class PromptController {
 
-    private PromptService promptService;
-    private UserService userService;
+    private final PromptService promptService;
+    private final UserService userService;
 
     public PromptController(
             PromptService promptService,
@@ -36,35 +39,51 @@ public class PromptController {
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
-        prompt.setOwner(user);
-
-        return promptService.createPrompt(
-                prompt
+        /*
+         * Never trust owner information supplied
+         * by the client.
+         */
+        prompt.setOwner(
+                user
         );
+
+        return promptService
+                .createPrompt(
+                        prompt
+                );
     }
 
     @PostMapping("/submit/{id}")
     public SubmissionHistory submit(
-            @PathVariable
-            Long id,
-
+            @PathVariable Long id,
             Authentication authentication
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
+
+        /*
+         * RateLimitExceededException is deliberately
+         * not caught here.
+         *
+         * GlobalExceptionHandler will convert it
+         * into HTTP 429 Too Many Requests.
+         */
+        return promptService
+                .submitPrompt(
+                        id,
+                        user.getId()
                 );
-
-        return promptService.submitPrompt(
-                id,
-                user.getId()
-        );
-
     }
 
     @GetMapping("/mine")
@@ -73,40 +92,46 @@ public class PromptController {
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
-        return promptService.getUserPrompts(
-                user.getId()
-        );
+        return promptService
+                .getUserPrompts(
+                        user.getId()
+                );
     }
 
     @GetMapping("/shared")
-    public List<Prompt>
-    shared() {
+    public List<Prompt> shared() {
 
-        return promptService.getSharedPrompts();
-
+        return promptService
+                .getSharedPrompts();
     }
 
     @PutMapping("/{id}")
     public Prompt update(
             @PathVariable Long id,
-            @Valid @RequestBody Prompt prompt,
+            @Valid
+            @RequestBody Prompt prompt,
             Authentication authentication
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
-        return promptService.updatePrompt(
-                id,
-                user.getId(),
-                prompt
-        );
+        return promptService
+                .updatePrompt(
+                        id,
+                        user.getId(),
+                        prompt
+                );
     }
 
     @DeleteMapping("/{id}")
@@ -116,14 +141,16 @@ public class PromptController {
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
+
+        promptService
+                .deletePrompt(
+                        id,
+                        user.getId()
                 );
-
-        promptService.deletePrompt(
-                id,
-                user.getId()
-        );
     }
-
 }
