@@ -1,10 +1,15 @@
 package com.example.promptvault.config;
 
+import com.example.promptvault.service.RateLimitService;
+import com.example.promptvault.service.SecurityAuditService;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,11 +20,25 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final RateLimitService rateLimitService;
+    private final SecurityAuditService securityAuditService;
+
+    public SecurityConfig(
+            RateLimitService rateLimitService,
+            SecurityAuditService securityAuditService
+    ) {
+
+        this.rateLimitService =
+                rateLimitService;
+
+        this.securityAuditService =
+                securityAuditService;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
 
         return new BCryptPasswordEncoder();
-
     }
 
     @Bean
@@ -46,7 +65,9 @@ public class SecurityConfig {
                                 "/admin-users-page",
                                 "/admin-categories-page",
                                 "/admin-keywords-page",
-                                "/admin-flagged-prompts-page"
+                                "/admin-flagged-prompts-page",
+                                "/admin-keywords-edit-page/**",
+                                "/edit-category-page/**"
                         )
                         .hasRole("ADMIN")
 
@@ -65,19 +86,94 @@ public class SecurityConfig {
 
                         .anyRequest()
                         .authenticated()
-
                 )
 
                 .formLogin(form -> form
 
-                        .loginPage("/login-page")
+                        .loginPage(
+                                "/login-page"
+                        )
 
-                        .loginProcessingUrl("/login")
+                        .loginProcessingUrl(
+                                "/login"
+                        )
 
                         .successHandler(
-                                (request,
-                                 response,
-                                 authentication) -> {
+                                (
+                                        request,
+                                        response,
+                                        authentication
+                                ) -> {
+
+                                    String username =
+                                            authentication
+                                                    .getName();
+
+                                    String ipAddress =
+                                            request
+                                                    .getRemoteAddr();
+
+                                    String key =
+                                            rateLimitService
+                                                    .createLoginKey(
+                                                            username,
+                                                            ipAddress
+                                                    );
+
+                                    /*
+                                     * If the user has already reached
+                                     * the failed-login limit, do not
+                                     * allow a correct password to bypass
+                                     * the temporary block.
+                                     */
+                                    if (
+                                            rateLimitService
+                                                    .isLoginBlocked(
+                                                            key
+                                                    )
+                                    ) {
+
+                                        securityAuditService
+                                                .loginRateLimited(
+                                                        username,
+                                                        ipAddress
+                                                );
+
+                                        SecurityContextHolder
+                                                .clearContext();
+
+                                        if (
+                                                request
+                                                        .getSession(false)
+                                                        != null
+                                        ) {
+
+                                            request
+                                                    .getSession(false)
+                                                    .invalidate();
+                                        }
+
+                                        response.sendRedirect(
+                                                "/login-page?rateLimited=true"
+                                        );
+
+                                        return;
+                                    }
+
+                                    /*
+                                     * Successful login clears any
+                                     * previous failed attempts.
+                                     */
+                                    rateLimitService
+                                            .clearLoginFailures(
+                                                    key
+                                            );
+
+                                    securityAuditService
+                                            .loginSuccess(
+                                                    username,
+                                                    ipAddress
+                                            );
 
                                     boolean admin =
                                             authentication
@@ -87,49 +183,127 @@ public class SecurityConfig {
                                                             authority ->
                                                                     authority
                                                                             .getAuthority()
-                                                                            .equals("ROLE_ADMIN")
+                                                                            .equals(
+                                                                                    "ROLE_ADMIN"
+                                                                            )
                                                     );
 
                                     if (admin) {
 
-                                        response.sendRedirect("/admin-dashboard");
+                                        response.sendRedirect(
+                                                "/admin-dashboard"
+                                        );
 
                                     } else {
 
-                                        response.sendRedirect("/user-dashboard");
-
+                                        response.sendRedirect(
+                                                "/user-dashboard"
+                                        );
                                     }
-
                                 }
                         )
 
-                        .failureUrl(
-                                "/login-page?error=true"
+                        .failureHandler(
+                                (
+                                        request,
+                                        response,
+                                        exception
+                                ) -> {
+
+                                    String username =
+                                            request
+                                                    .getParameter(
+                                                            "username"
+                                                    );
+
+                                    String ipAddress =
+                                            request
+                                                    .getRemoteAddr();
+
+                                    String key =
+                                            rateLimitService
+                                                    .createLoginKey(
+                                                            username,
+                                                            ipAddress
+                                                    );
+
+                                    /*
+                                     * Record the failed authentication
+                                     * attempt.
+                                     */
+                                    rateLimitService
+                                            .recordLoginFailure(
+                                                    key
+                                            );
+
+                                    securityAuditService
+                                            .loginFailure(
+                                                    username,
+                                                    ipAddress
+                                            );
+
+                                    /*
+                                     * If the maximum number of failed
+                                     * attempts has now been reached,
+                                     * show the rate-limit message.
+                                     */
+                                    if (
+                                            rateLimitService
+                                                    .isLoginBlocked(
+                                                            key
+                                                    )
+                                    ) {
+
+                                        securityAuditService
+                                                .loginRateLimited(
+                                                        username,
+                                                        ipAddress
+                                                );
+
+                                        response.sendRedirect(
+                                                "/login-page?rateLimited=true"
+                                        );
+
+                                    } else {
+
+                                        response.sendRedirect(
+                                                "/login-page?error=true"
+                                        );
+                                    }
+                                }
                         )
 
                         .permitAll()
-
                 )
-        .logout(logout -> logout
 
-                .logoutUrl("/logout")
+                .logout(logout -> logout
 
-                .logoutSuccessUrl("/login-page?logout=true")
+                        .logoutUrl(
+                                "/logout"
+                        )
 
-                .invalidateHttpSession(true)
+                        .logoutSuccessUrl(
+                                "/login-page?logout=true"
+                        )
 
-                .deleteCookies("JSESSIONID")
+                        .invalidateHttpSession(
+                                true
+                        )
 
-                .permitAll()
+                        .deleteCookies(
+                                "JSESSIONID"
+                        )
 
-        )
+                        .permitAll()
+                )
+
                 .sessionManagement(session -> session
 
                         .sessionFixation(
                                 fixation ->
-                                        fixation.changeSessionId()
+                                        fixation
+                                                .changeSessionId()
                         )
-
                 )
 
                 .exceptionHandling(exception -> exception
@@ -137,8 +311,8 @@ public class SecurityConfig {
                         .accessDeniedPage(
                                 "/access-denied"
                         )
-
                 )
+
                 .headers(headers -> headers
 
                         .contentSecurityPolicy(csp -> csp
@@ -154,10 +328,8 @@ public class SecurityConfig {
                                                 "form-action 'self'"
                                 )
                         )
-
                 );
 
         return http.build();
-
     }
 }

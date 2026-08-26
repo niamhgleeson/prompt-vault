@@ -25,6 +25,15 @@
 </p>
 
 <p
+        th:if="${param.rateLimited}"
+        class="error-message">
+
+    Too many failed login attempts.
+    Please wait 15 minutes before trying again.
+
+</p>
+
+<p
         th:if="${param.logout}"
         class="success-message">
 

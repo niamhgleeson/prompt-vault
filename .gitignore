@@ -1,8 +1,16 @@
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
+
+### Local secrets - never commit ###
+run-local.sh
+.env
+application-local.properties
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+logs/
+*.log
 
 ### STS ###
 .apt_generated

@@ -1,5 +1,6 @@
 package com.example.promptvault.controller;
 
+import com.example.promptvault.exception.RateLimitExceededException;
 import com.example.promptvault.model.PolicyKeyword;
 import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.PromptCategory;
@@ -9,6 +10,7 @@ import com.example.promptvault.model.User;
 import com.example.promptvault.service.PolicyKeywordService;
 import com.example.promptvault.service.PromptCategoryService;
 import com.example.promptvault.service.PromptService;
+import com.example.promptvault.service.SecurityAuditService;
 import com.example.promptvault.service.SubmissionHistoryService;
 import com.example.promptvault.service.UserService;
 
@@ -31,13 +33,15 @@ public class PageController {
     private final PromptCategoryService promptCategoryService;
     private final PolicyKeywordService policyKeywordService;
     private final SubmissionHistoryService submissionHistoryService;
+    private final SecurityAuditService securityAuditService;
 
     public PageController(
             UserService userService,
             PromptService promptService,
             PromptCategoryService promptCategoryService,
             PolicyKeywordService policyKeywordService,
-            SubmissionHistoryService submissionHistoryService
+            SubmissionHistoryService submissionHistoryService,
+            SecurityAuditService securityAuditService
     ) {
 
         this.userService = userService;
@@ -45,6 +49,7 @@ public class PageController {
         this.promptCategoryService = promptCategoryService;
         this.policyKeywordService = policyKeywordService;
         this.submissionHistoryService = submissionHistoryService;
+        this.securityAuditService = securityAuditService;
     }
 
     @GetMapping("/")
@@ -90,7 +95,8 @@ public class PageController {
 
         model.addAttribute(
                 "categories",
-                promptCategoryService.getAll()
+                promptCategoryService
+                        .getAll()
         );
 
         return "create-prompt";
@@ -102,16 +108,9 @@ public class PageController {
             Authentication authentication
     ) {
 
-        User user =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+        User user = userService.findByUsername(authentication.getName());
 
-        model.addAttribute(
-                "prompts",
-                promptService.getUserPrompts(
-                        user.getId()
-                )
+        model.addAttribute("prompts", promptService.getUserPrompts(user.getId())
         );
 
         return "user-prompts";
@@ -124,7 +123,8 @@ public class PageController {
 
         model.addAttribute(
                 "prompts",
-                promptService.getSharedPrompts()
+                promptService
+                        .getSharedPrompts()
         );
 
         return "shared-prompts";
@@ -153,19 +153,23 @@ public class PageController {
 
             userService.register(user);
 
-            redirectAttributes.addFlashAttribute(
-                    "message",
-                    "Registration successful. You can now log in."
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Registration successful. "
+                                    + "You can now log in."
+                    );
 
             return "redirect:/login-page";
 
         } catch (RuntimeException e) {
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "Registration failed. Please check your details."
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Registration failed. "
+                                    + "Please check your details."
+                    );
 
             return "redirect:/register-page";
         }
@@ -181,22 +185,27 @@ public class PageController {
     ) {
 
         User owner =
-                userService.findByUsername(
-                        authentication.getName()
-                );
-
-        Prompt prompt =
-                new Prompt();
-
-        prompt.setTitle(title);
-        prompt.setPromptText(promptText);
-        prompt.setVisibility(visibility);
-        prompt.setOwner(owner);
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
         PromptCategory category =
-                promptCategoryService.findById(
-                        categoryId
-                );
+                promptCategoryService
+                        .findById(
+                                categoryId
+                        );
+
+        Prompt prompt = new Prompt();
+
+        prompt.setTitle(title);
+
+        prompt.setPromptText(promptText);
+
+        prompt.setVisibility(visibility);
+
+        prompt.setOwner(owner);
 
         prompt.setCategory(category);
 
@@ -205,7 +214,9 @@ public class PageController {
         return "redirect:/user-prompts-page";
     }
 
-    @PostMapping("/web/prompts/submit/{id}")
+    @PostMapping(
+            "/web/prompts/submit/{id}"
+    )
     public String submitPromptFromPage(
             @PathVariable Long id,
             RedirectAttributes redirectAttributes,
@@ -215,50 +226,82 @@ public class PageController {
         try {
 
             User user =
-                    userService.findByUsername(
-                            authentication.getName()
-                    );
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
             SubmissionHistory history =
-                    promptService.submitPrompt(
-                            id,
-                            user.getId()
+                    promptService
+                            .submitPrompt(
+                                    id,
+                                    user.getId()
+                            );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "simulatedResponse",
+                            history
+                                    .getSimulatedResponse()
                     );
 
-            redirectAttributes.addFlashAttribute(
-                    "simulatedResponse",
-                    history.getSimulatedResponse()
-            );
+            if (
+                    history.isFlagged()
+            ) {
 
-            if (history.isFlagged()) {
-
-                redirectAttributes.addFlashAttribute(
-                        "warning",
-                        "Warning: this prompt may contain sensitive information. "
-                                + "Matched keyword: "
-                                + history.getFlaggedKeyword()
-                );
+                redirectAttributes
+                        .addFlashAttribute(
+                                "warning",
+                                "Warning: this prompt "
+                                        + "may contain sensitive "
+                                        + "information. "
+                                        + "Matched keyword: "
+                                        + history
+                                        .getFlaggedKeyword()
+                        );
 
             } else {
 
-                redirectAttributes.addFlashAttribute(
-                        "message",
-                        "Prompt submitted successfully."
-                );
+                redirectAttributes
+                        .addFlashAttribute(
+                                "message",
+                                "Prompt submitted successfully."
+                        );
             }
 
-        } catch (RuntimeException e) {
+        } catch (
+                RateLimitExceededException e
+        ) {
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "You can only submit your own prompts."
-            );
+            /*
+             * Friendly web-page response for
+             * rate-limited users.
+             */
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/user-prompts-page";
     }
 
-    @PostMapping("/web/prompts/delete/{id}")
+
+    @PostMapping(
+            "/web/prompts/delete/{id}"
+    )
     public String deletePrompt(
             @PathVariable Long id,
             Authentication authentication,
@@ -268,32 +311,42 @@ public class PageController {
         try {
 
             User user =
-                    userService.findByUsername(
-                            authentication.getName()
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
+
+            promptService
+                    .deletePrompt(
+                            id,
+                            user.getId()
                     );
 
-            promptService.deletePrompt(
-                    id,
-                    user.getId()
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Prompt deleted successfully."
+                    );
 
-            redirectAttributes.addFlashAttribute(
-                    "message",
-                    "Prompt deleted successfully."
-            );
+        } catch (
+                RuntimeException e
+        ) {
 
-        } catch (RuntimeException e) {
-
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "You can only delete your own prompts."
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/user-prompts-page";
     }
 
-    @GetMapping("/edit-prompt-page/{id}")
+
+    @GetMapping(
+            "/edit-prompt-page/{id}"
+    )
     public String editPromptPage(
             @PathVariable Long id,
             Model model,
@@ -304,15 +357,18 @@ public class PageController {
         try {
 
             User user =
-                    userService.findByUsername(
-                            authentication.getName()
-                    );
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
             Prompt prompt =
-                    promptService.getUserPromptById(
-                            id,
-                            user.getId()
-                    );
+                    promptService
+                            .getUserPromptById(
+                                    id,
+                                    user.getId()
+                            );
 
             model.addAttribute(
                     "prompt",
@@ -321,23 +377,30 @@ public class PageController {
 
             model.addAttribute(
                     "categories",
-                    promptCategoryService.getAll()
+                    promptCategoryService
+                            .getAll()
             );
 
             return "edit-prompt";
 
-        } catch (RuntimeException e) {
+        } catch (
+                RuntimeException e
+        ) {
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "You can only edit your own prompts."
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
 
             return "redirect:/user-prompts-page";
         }
     }
 
-    @PostMapping("/web/prompts/edit/{id}")
+
+    @PostMapping(
+            "/web/prompts/edit/{id}"
+    )
     public String editPromptFromPage(
             @PathVariable Long id,
             @RequestParam String title,
@@ -351,45 +414,64 @@ public class PageController {
         try {
 
             User user =
-                    userService.findByUsername(
-                            authentication.getName()
-                    );
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
+
+            PromptCategory category =
+                    promptCategoryService
+                            .findById(
+                                    categoryId
+                            );
 
             Prompt updated =
                     new Prompt();
 
-            updated.setTitle(title);
-            updated.setPromptText(promptText);
-            updated.setVisibility(visibility);
+            updated.setTitle(
+                    title
+            );
 
-            PromptCategory category =
-                    promptCategoryService.findById(
-                            categoryId
+            updated.setPromptText(
+                    promptText
+            );
+
+            updated.setVisibility(
+                    visibility
+            );
+
+            updated.setCategory(
+                    category
+            );
+
+            promptService
+                    .updatePrompt(
+                            id,
+                            user.getId(),
+                            updated
                     );
 
-            updated.setCategory(category);
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Prompt updated successfully."
+                    );
 
-            promptService.updatePrompt(
-                    id,
-                    user.getId(),
-                    updated
-            );
+        } catch (
+                RuntimeException e
+        ) {
 
-            redirectAttributes.addFlashAttribute(
-                    "message",
-                    "Prompt updated successfully."
-            );
-
-        } catch (RuntimeException e) {
-
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "You can only edit your own prompts."
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/user-prompts-page";
     }
+
 
     @GetMapping("/admin-users-page")
     public String adminUsersPage(
@@ -404,10 +486,14 @@ public class PageController {
         return "admin-users";
     }
 
-    @PostMapping("/web/users/{id}/disable")
+
+    @PostMapping(
+            "/web/users/{id}/disable"
+    )
     public String disableUserFromPage(
             @PathVariable Long id,
-            RedirectAttributes redirectAttributes
+            RedirectAttributes redirectAttributes,
+            Authentication authentication
     ) {
 
         try {
@@ -417,21 +503,42 @@ public class PageController {
                     false
             );
 
-        } catch (RuntimeException e) {
+            securityAuditService
+                    .userStatusChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            false
+                    );
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    e.getMessage()
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "User disabled successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/admin-users-page";
     }
 
-    @PostMapping("/web/users/{id}/enable")
+
+    @PostMapping(
+            "/web/users/{id}/enable"
+    )
     public String enableUserFromPage(
             @PathVariable Long id,
-            RedirectAttributes redirectAttributes
+            RedirectAttributes redirectAttributes,
+            Authentication authentication
     ) {
 
         try {
@@ -441,29 +548,51 @@ public class PageController {
                     true
             );
 
-        } catch (RuntimeException e) {
+            securityAuditService
+                    .userStatusChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            true
+                    );
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    e.getMessage()
-            );
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "User enabled successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/admin-users-page";
     }
 
-    @GetMapping("/admin-categories-page")
+
+    @GetMapping(
+            "/admin-categories-page"
+    )
     public String adminCategoriesPage(
             Model model
     ) {
 
         model.addAttribute(
                 "categories",
-                promptCategoryService.getAll()
+                promptCategoryService
+                        .getAll()
         );
 
         return "admin-categories";
     }
+
 
     @PostMapping("/web/categories")
     public String createCategoryFromPage(
@@ -473,58 +602,99 @@ public class PageController {
     ) {
 
         User admin =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
         PromptCategory category =
                 new PromptCategory();
 
-        category.setName(name);
-        category.setDescription(description);
-
-        promptCategoryService.create(
-                category,
-                admin
+        category.setName(
+                name
         );
+
+        category.setDescription(
+                description
+        );
+
+        promptCategoryService
+                .create(
+                        category,
+                        admin
+                );
+
+        securityAuditService
+                .categoryChanged(
+                        authentication
+                                .getName(),
+                        category.getId(),
+                        "CREATE"
+                );
 
         return "redirect:/admin-categories-page";
     }
 
-    @PostMapping("/web/categories/{id}/delete")
+
+    @PostMapping(
+            "/web/categories/{id}/delete"
+    )
     public String deleteCategory(
             @PathVariable Long id,
-            RedirectAttributes redirectAttributes
+            RedirectAttributes redirectAttributes,
+            Authentication authentication
     ) {
 
         try {
 
-            promptCategoryService.delete(id);
+            promptCategoryService
+                    .delete(
+                            id
+                    );
 
-            redirectAttributes.addFlashAttribute(
-                    "message",
-                    "Category deleted successfully."
-            );
+            securityAuditService
+                    .categoryChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            "DELETE"
+                    );
 
-        } catch (RuntimeException e) {
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Category deleted successfully."
+                    );
 
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    e.getMessage()
-            );
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            e.getMessage()
+                    );
         }
 
         return "redirect:/admin-categories-page";
     }
 
-    @GetMapping("/edit-category-page/{id}")
+
+    @GetMapping(
+            "/edit-category-page/{id}"
+    )
     public String editCategoryPage(
             @PathVariable Long id,
             Model model
     ) {
 
         PromptCategory category =
-                promptCategoryService.findById(id);
+                promptCategoryService
+                        .findById(
+                                id
+                        );
 
         model.addAttribute(
                 "category",
@@ -534,39 +704,62 @@ public class PageController {
         return "edit-category";
     }
 
-    @PostMapping("/web/categories/edit/{id}")
+
+    @PostMapping(
+            "/web/categories/edit/{id}"
+    )
     public String updateCategory(
             @PathVariable Long id,
             @RequestParam String name,
-            @RequestParam String description
+            @RequestParam String description,
+            Authentication authentication
     ) {
 
         PromptCategory category =
                 new PromptCategory();
 
-        category.setName(name);
-        category.setDescription(description);
-
-        promptCategoryService.update(
-                id,
-                category
+        category.setName(
+                name
         );
+
+        category.setDescription(
+                description
+        );
+
+        promptCategoryService
+                .update(
+                        id,
+                        category
+                );
+
+        securityAuditService
+                .categoryChanged(
+                        authentication
+                                .getName(),
+                        id,
+                        "UPDATE"
+                );
 
         return "redirect:/admin-categories-page";
     }
 
-    @GetMapping("/admin-keywords-page")
+
+    @GetMapping(
+            "/admin-keywords-page"
+    )
     public String adminPolicyKeywordsPage(
             Model model
     ) {
 
         model.addAttribute(
                 "keywords",
-                policyKeywordService.getAll()
+                policyKeywordService
+                        .getAll()
         );
 
         return "admin-keywords";
     }
+
 
     @PostMapping("/web/keywords")
     public String createKeyword(
@@ -575,9 +768,11 @@ public class PageController {
     ) {
 
         User admin =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
         PolicyKeyword policyKeyword =
                 new PolicyKeyword();
@@ -586,31 +781,62 @@ public class PageController {
                 keyword
         );
 
-        policyKeywordService.create(
-                policyKeyword,
-                admin
-        );
+        policyKeywordService
+                .create(
+                        policyKeyword,
+                        admin
+                );
+
+        securityAuditService
+                .keywordChanged(
+                        authentication
+                                .getName(),
+                        policyKeyword.getId(),
+                        "CREATE"
+                );
 
         return "redirect:/admin-keywords-page";
     }
 
-    @PostMapping("/web/keywords/{id}/delete")
+
+    @PostMapping(
+            "/web/keywords/{id}/delete"
+    )
     public String deleteKeyword(
-            @PathVariable Long id
+            @PathVariable Long id,
+            Authentication authentication
     ) {
 
-        policyKeywordService.delete(id);
+        policyKeywordService
+                .delete(
+                        id
+                );
+
+        securityAuditService
+                .keywordChanged(
+                        authentication
+                                .getName(),
+                        id,
+                        "DELETE"
+                );
 
         return "redirect:/admin-keywords-page";
     }
 
-    @GetMapping("/admin-keywords-edit-page/{id}")
+
+    @GetMapping(
+            "/admin-keywords-edit-page/{id}"
+    )
     public String editKeywordPage(
             @PathVariable Long id,
             Model model
     ) {
+
         PolicyKeyword keyword =
-                policyKeywordService.findById(id);
+                policyKeywordService
+                        .findById(
+                                id
+                        );
 
         model.addAttribute(
                 "keyword",
@@ -620,7 +846,10 @@ public class PageController {
         return "admin-keyword-edit";
     }
 
-    @PostMapping("/web/keywords/{id}/edit")
+
+    @PostMapping(
+            "/web/keywords/{id}/edit"
+    )
     public String editKeywordFromPage(
             @PathVariable Long id,
             @RequestParam String keyword,
@@ -628,18 +857,30 @@ public class PageController {
     ) {
 
         User admin =
-                userService.findByUsername(
-                        authentication.getName()
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
+
+        policyKeywordService
+                .update(
+                        id,
+                        keyword,
+                        admin
                 );
 
-        policyKeywordService.update(
-                id,
-                keyword,
-                admin
-        );
+        securityAuditService
+                .keywordChanged(
+                        authentication
+                                .getName(),
+                        id,
+                        "UPDATE"
+                );
 
         return "redirect:/admin-keywords-page";
     }
+
 
     @GetMapping("/user-history-page")
     public String userHistoryPage(
@@ -648,28 +889,35 @@ public class PageController {
     ) {
 
         User user =
-                userService.findByUsername(
-                        authentication.getName()
-                );
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
         model.addAttribute(
                 "history",
-                submissionHistoryService.getUserHistory(
-                        user.getId()
-                )
+                submissionHistoryService
+                        .getUserHistory(
+                                user.getId()
+                        )
         );
 
         return "user-history";
     }
 
-    @GetMapping("/admin-flagged-prompts-page")
+
+    @GetMapping(
+            "/admin-flagged-prompts-page"
+    )
     public String adminFlaggedPromptsPage(
             Model model
     ) {
 
         model.addAttribute(
                 "flaggedPrompts",
-                submissionHistoryService.getFlaggedResponses()
+                submissionHistoryService
+                        .getFlaggedResponses()
         );
 
         return "admin-flagged-prompts";
