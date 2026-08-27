@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.web.SecurityFilterChain;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -47,7 +48,9 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-
+                .redirectToHttps(
+                        withDefaults()
+                )
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
@@ -277,23 +280,10 @@ public class SecurityConfig {
                 )
 
                 .logout(logout -> logout
-
-                        .logoutUrl(
-                                "/logout"
-                        )
-
-                        .logoutSuccessUrl(
-                                "/login-page?logout=true"
-                        )
-
-                        .invalidateHttpSession(
-                                true
-                        )
-
-                        .deleteCookies(
-                                "JSESSIONID"
-                        )
-
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login-page?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
 
@@ -301,16 +291,24 @@ public class SecurityConfig {
 
                         .sessionFixation(
                                 fixation ->
-                                        fixation
-                                                .changeSessionId()
+                                        fixation.changeSessionId()
                         )
                 )
 
                 .exceptionHandling(exception -> exception
 
-                        .accessDeniedPage(
-                                "/access-denied"
+                        .accessDeniedHandler(
+                                (request,
+                                 response,
+                                 accessDeniedException) -> {
+
+                                    response.sendError(
+                                            403,
+                                            "Access Denied"
+                                    );
+                                }
                         )
+
                 )
 
                 .headers(headers -> headers

@@ -38,9 +38,9 @@ public class User {
     private String email;
 
     @NotBlank
-    @Size(min = 8, max = 100)
     @JsonProperty(
-            access = JsonProperty.Access.WRITE_ONLY
+            access =
+                    JsonProperty.Access.WRITE_ONLY
     )
     private String password;
 

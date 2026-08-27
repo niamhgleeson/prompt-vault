@@ -1,11 +1,16 @@
 package com.example.promptvault.controller;
 
+import com.example.promptvault.dto.PromptRequest;
 import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.SubmissionHistory;
 import com.example.promptvault.model.User;
 
 import com.example.promptvault.service.PromptService;
 import com.example.promptvault.service.UserService;
+import com.example.promptvault.model.PromptCategory;
+import com.example.promptvault.service.PromptCategoryService;
+
+import com.example.promptvault.dto.PromptRequest;
 
 import jakarta.validation.Valid;
 
@@ -21,20 +26,30 @@ public class PromptController {
 
     private final PromptService promptService;
     private final UserService userService;
+    private final PromptCategoryService promptCategoryService;
 
     public PromptController(
             PromptService promptService,
-            UserService userService
+            UserService userService,
+            PromptCategoryService promptCategoryService
     ) {
 
-        this.promptService = promptService;
-        this.userService = userService;
+        this.promptService =
+                promptService;
+
+        this.userService =
+                userService;
+
+        this.promptCategoryService =
+                promptCategoryService;
     }
 
     @PostMapping
     public Prompt createPrompt(
             @Valid
-            @RequestBody Prompt prompt,
+            @RequestBody
+            PromptRequest request,
+
             Authentication authentication
     ) {
 
@@ -45,12 +60,33 @@ public class PromptController {
                                         .getName()
                         );
 
-        /*
-         * Never trust owner information supplied
-         * by the client.
-         */
+        PromptCategory category =
+                promptCategoryService
+                        .findById(
+                                request.getCategoryId()
+                        );
+
+        Prompt prompt =
+                new Prompt();
+
+        prompt.setTitle(
+                request.getTitle()
+        );
+
+        prompt.setPromptText(
+                request.getPromptText()
+        );
+
+        prompt.setVisibility(
+                request.getVisibility()
+        );
+
         prompt.setOwner(
                 user
+        );
+
+        prompt.setCategory(
+                category
         );
 
         return promptService
@@ -114,8 +150,11 @@ public class PromptController {
     @PutMapping("/{id}")
     public Prompt update(
             @PathVariable Long id,
+
             @Valid
-            @RequestBody Prompt prompt,
+            @RequestBody
+            PromptRequest request,
+
             Authentication authentication
     ) {
 
@@ -126,11 +165,36 @@ public class PromptController {
                                         .getName()
                         );
 
+        PromptCategory category =
+                promptCategoryService
+                        .findById(
+                                request.getCategoryId()
+                        );
+
+        Prompt updated =
+                new Prompt();
+
+        updated.setTitle(
+                request.getTitle()
+        );
+
+        updated.setPromptText(
+                request.getPromptText()
+        );
+
+        updated.setVisibility(
+                request.getVisibility()
+        );
+
+        updated.setCategory(
+                category
+        );
+
         return promptService
                 .updatePrompt(
                         id,
                         user.getId(),
-                        prompt
+                        updated
                 );
     }
 

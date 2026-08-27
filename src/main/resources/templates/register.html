@@ -1,24 +1,160 @@
 <!DOCTYPE html>
-<html lang="en">
-    <meta charset="UTF-8">
-  <head>
 
-    <title>PromptVault Login</title>
+<html
+        lang="en"
+        xmlns:th="http://www.thymeleaf.org">
 
-  </head>
+<head>
+
+  <meta charset="UTF-8">
+
+  <title>PromptVault Registration</title>
+
+</head>
+
+<body>
 
 <h1>PromptVault</h1>
-<body>
-<form th:action="@{/register}" method="post">
-  <input type="text" name="name" placeholder="Name"><br>
-  <input type="text" name="surname" placeholder="Surname"><br>
-  <input type="text" name="username" placeholder="Username"><br>
-  <input type="email" name="email" placeholder="Email"><br>
-  <input type="password" name="password" placeholder="Password"><br>
 
-  <button type="submit">Register</button>
+<h2>Register</h2>
+
+<!-- General registration error -->
+<p
+        th:if="${error}"
+        th:text="${error}"
+        style="color: red;">
+</p>
+
+<form
+        th:action="@{/register}"
+        th:object="${user}"
+        method="post">
+
+
+  <!-- Name -->
+  <div>
+    <label for="name">
+      Name
+    </label>
+
+    <br>
+
+    <input
+            id="name"
+            type="text"
+            th:field="*{name}"
+            placeholder="Name">
+
+    <p
+            th:if="${#fields.hasErrors('name')}"
+            th:errors="*{name}"
+            style="color: red;">
+    </p>
+  </div>
+
+
+  <!-- Surname -->
+  <div>
+    <label for="surname">
+      Surname
+    </label>
+
+    <br>
+
+    <input
+            id="surname"
+            type="text"
+            th:field="*{surname}"
+            placeholder="Surname">
+
+    <p
+            th:if="${#fields.hasErrors('surname')}"
+            th:errors="*{surname}"
+            style="color: red;">
+    </p>
+  </div>
+
+
+  <!-- Username -->
+  <div>
+    <label for="username">
+      Username
+    </label>
+
+    <br>
+
+    <input
+            id="username"
+            type="text"
+            th:field="*{username}"
+            placeholder="Username">
+
+    <p
+            th:if="${#fields.hasErrors('username')}"
+            th:errors="*{username}"
+            style="color: red;">
+    </p>
+  </div>
+
+
+  <!-- Email -->
+  <div>
+    <label for="email">
+      Email
+    </label>
+
+    <br>
+
+    <input
+            id="email"
+            type="email"
+            th:field="*{email}"
+            placeholder="Email">
+
+    <p
+            th:if="${#fields.hasErrors('email')}"
+            th:errors="*{email}"
+            style="color: red;">
+    </p>
+  </div>
+
+
+  <!-- Password -->
+  <div>
+    <label for="password">
+      Password
+    </label>
+
+    <br>
+
+    <input
+            id="password"
+            type="password"
+            th:field="*{password}"
+            placeholder="Password">
+
+    <p
+            th:if="${#fields.hasErrors('password')}"
+            th:errors="*{password}"
+            style="color: red;">
+    </p>
+  </div>
+
+
+  <div>
+    <button type="submit">
+      Register
+    </button>
+  </div>
+
 </form>
 
-<a href="/login-page">Back to login</a>
+<br>
+
+<a th:href="@{/login-page}">
+  Back to login
+</a>
+
 </body>
+
 </html>
