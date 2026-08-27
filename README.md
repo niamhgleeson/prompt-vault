@@ -17,8 +17,8 @@ The application supports two roles:
 
 The administrator can:
 
-- Login and logout
-- View all registered users
+- Log in and log out
+- View registered users
 - Enable and disable user accounts
 - Add, edit and delete prompt categories
 - Add, edit and delete policy keywords
@@ -27,14 +27,14 @@ The administrator can:
 Users can:
 
 - Register
-- Login and logout
+- Log in and log out
 - Create prompts
 - Edit their own prompts
 - Delete their own prompts
 - View their own prompts
 - Browse shared prompts
 - Submit prompts to a simulated AI assistant
-- Receive warnings if prompts contain sensitive keywords
+- Receive warnings when prompts contain configured sensitive keywords
 - View their own prompt submission history
 
 The application uses a simulated AI response and does not connect to an external AI API.
@@ -51,30 +51,30 @@ The application uses a simulated AI response and does not connect to an external
 - MySQL
 - Thymeleaf
 - Maven
+- Snyk
+- GitHub Actions
 
 ---
 
 # Prerequisites
 
-The following software must be installed before running the application.
+The following software is required to run the application:
+
+- Java 21
+- Git
+- MySQL Server
 
 ## Java
 
-Install Java 21.
-
-Check the installation:
+Check the installed Java version:
 
 ```bash
 java --version
 ```
 
----
-
 ## Git
 
-Install Git.
-
-Ubuntu:
+On Ubuntu:
 
 ```bash
 sudo apt install git
@@ -86,13 +86,9 @@ Check the installation:
 git --version
 ```
 
----
-
 ## MySQL
 
-Install MySQL Server.
-
-Ubuntu:
+Install MySQL Server:
 
 ```bash
 sudo apt update
@@ -153,19 +149,21 @@ EXIT;
 
 # Importing the Database
 
-The submission includes the file:
+The submission includes:
 
 ```text
 database.sql
 ```
 
-Import it into MySQL:
+Import it with:
 
 ```bash
 mysql -u root -p promptvault < database.sql
 ```
 
-This will create the application's database tables, including:
+The script creates the application's database structure and any supplied sample data.
+
+The main application tables include:
 
 - users
 - prompts
@@ -173,23 +171,21 @@ This will create the application's database tables, including:
 - policy_keywords
 - submission_history
 
-and any sample data included with the submission.
-
 ---
 
 # Application Configuration
 
-The application uses environment variables for sensitive credentials.
+PromptVault uses environment variables for sensitive configuration values.
 
-Passwords should not be stored directly in the source code or committed to the Git repository.
+Passwords and secrets should not be stored directly in source code or committed to the Git repository.
 
-The application configuration can be found at:
+The main Spring Boot configuration is located at:
 
 ```text
 src/main/resources/application.properties
 ```
 
-The relevant configuration is:
+Database configuration uses environment variables such as:
 
 ```properties
 spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/promptvault}
@@ -202,13 +198,13 @@ app.admin.password=${PROMPTVAULT_ADMIN_PASSWORD}
 spring.jpa.hibernate.ddl-auto=update
 ```
 
-The environment variables must be configured before starting the application.
+The application is also configured to use HTTPS and secure session cookies.
 
 ---
 
-# Configuring the Database Credentials
+# Configuring Database Credentials
 
-Set the MySQL username used by the application:
+Set the MySQL username:
 
 ```bash
 export DB_USER=root
@@ -220,15 +216,13 @@ Set the MySQL password:
 export DB_PASSWORD='YOUR_MYSQL_PASSWORD'
 ```
 
-Replace `YOUR_MYSQL_PASSWORD` with the password for the MySQL account being used.
-
-If required, the database URL can also be changed:
+If required, set a different database URL:
 
 ```bash
 export DB_URL='jdbc:mysql://localhost:3306/promptvault'
 ```
 
-If `DB_URL` is not specified, the application uses:
+If `DB_URL` is not specified, the default database URL is:
 
 ```text
 jdbc:mysql://localhost:3306/promptvault
@@ -240,7 +234,7 @@ jdbc:mysql://localhost:3306/promptvault
 
 PromptVault creates a predefined administrator account when the application starts if an administrator with the configured username does not already exist.
 
-The administrator credentials are supplied using environment variables rather than being hardcoded in the application.
+Administrator credentials are supplied using environment variables rather than being hardcoded in source code.
 
 Set the administrator username:
 
@@ -254,62 +248,55 @@ Set the administrator password:
 export PROMPTVAULT_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
 ```
 
-Replace `YOUR_ADMIN_PASSWORD` with the password that should be used for the administrator account.
+The administrator password is encoded using BCrypt before being stored in the database.
 
-For example, before starting the application, the required environment variables can be configured with:
+## Existing Administrator Accounts
+
+The administrator is only created if an account with the configured administrator username does not already exist.
+
+Therefore, changing:
+
+```text
+PROMPTVAULT_ADMIN_PASSWORD
+```
+
+does not automatically change the password of an administrator account that already exists in the database.
+
+When starting with a fresh database, the administrator is created using the password supplied through the environment variable.
+
+---
+
+# HTTPS Configuration
+
+PromptVault is configured to run locally using HTTPS.
+
+The local TLS certificate is stored in a Java keystore. The keystore password must be supplied using an environment variable rather than being committed to the repository.
+
+Set the keystore password:
 
 ```bash
-export DB_USER=root
-export DB_PASSWORD='YOUR_MYSQL_PASSWORD'
-export PROMPTVAULT_ADMIN_USERNAME=admin
-export PROMPTVAULT_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
+export KEYSTORE_PASSWORD='YOUR_KEYSTORE_PASSWORD'
 ```
 
-These environment variables apply to the current terminal session.
+The application runs at:
 
-If a new terminal is opened, they must be set again before running the application.
+```text
+https://localhost:8080
+```
+
+Because the project uses a locally generated development certificate, the browser may display a certificate or "Not secure" warning.
+
+This is expected for the local development environment because the certificate is not signed by a publicly trusted Certificate Authority.
+
+Do not disable HTTPS in order to remove this warning.
+
+For a production deployment, a certificate issued by a trusted Certificate Authority should be used.
 
 ---
 
-# Important Note About an Existing Administrator
+# Setting All Required Environment Variables
 
-The administrator is created only if an account with the configured administrator username does not already exist.
-
-For example, if the database already contains:
-
-```text
-admin
-```
-
-changing:
-
-```text
-PROMPTVAULT_ADMIN_PASSWORD
-```
-
-will not automatically change the password of that existing account.
-
-This prevents the administrator password from being reset every time the application starts.
-
-When starting with a fresh database that does not already contain the administrator, the administrator account will be created using the password supplied in:
-
-```text
-PROMPTVAULT_ADMIN_PASSWORD
-```
-
-The password is encoded using BCrypt before it is stored in the database.
-
----
-
-# Running the Application
-
-Before running the application, ensure that:
-
-1. MySQL is running.
-2. The `promptvault` database has been created.
-3. `database.sql` has been imported if required.
-4. The database environment variables have been configured.
-5. The administrator environment variables have been configured.
+Before running PromptVault, configure the required environment variables.
 
 For example:
 
@@ -318,37 +305,63 @@ export DB_USER=root
 export DB_PASSWORD='YOUR_MYSQL_PASSWORD'
 export PROMPTVAULT_ADMIN_USERNAME=admin
 export PROMPTVAULT_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
+export KEYSTORE_PASSWORD='YOUR_KEYSTORE_PASSWORD'
 ```
 
-Then run the application from the project directory:
+These environment variables apply to the current terminal session.
+
+If a new terminal is opened, they must be configured again.
+
+A local helper script may be used to set development environment variables, but any script containing real credentials must be excluded from version control using `.gitignore`.
+
+Never commit real database, administrator or keystore passwords to the repository.
+
+---
+
+# Running the Application
+
+Before running the application, ensure that:
+
+1. MySQL is running.
+2. The `promptvault` database exists.
+3. `database.sql` has been imported if required.
+4. Database environment variables have been configured.
+5. Administrator environment variables have been configured.
+6. The keystore password environment variable has been configured.
+
+Run the application from the project directory:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Alternatively, the project can be opened in IntelliJ IDEA and run using the `PromptVaultApplication` class.
-
-When the application has started successfully, open:
+Alternatively, open the project in IntelliJ IDEA and run:
 
 ```text
-http://localhost:8080
+PromptVaultApplication
 ```
 
-The application will display the PromptVault login page.
+When the application starts successfully, open:
+
+```text
+https://localhost:8080
+```
+
+The PromptVault login page will be displayed.
 
 ---
 
 # Administrator Login
 
-The default administrator username is:
+The configured administrator username defaults to:
 
 ```text
 admin
 ```
 
-The administrator password is **not stored in this repository**.
+The administrator password is not stored in this repository.
 
-It is the password supplied before first startup using:
+It is supplied before first startup using:
 
 ```text
 PROMPTVAULT_ADMIN_PASSWORD
@@ -366,42 +379,21 @@ The application stores the administrator password as a BCrypt hash rather than p
 
 # Creating a User Account
 
-A normal user account can be created through the application's Register page:
+A normal user account can be created through:
 
 ```text
-http://localhost:8080/register-page
+https://localhost:8080/register-page
 ```
 
 Registered users are assigned the `USER` role.
 
-After registration, the user can log in through:
+After registration, users can log in at:
 
 ```text
-http://localhost:8080/login-page
+https://localhost:8080/login-page
 ```
 
----
-
-# Spring Security
-
-The application uses Spring Security for authentication, authorization and session management.
-
-Public pages include:
-
-- Login
-- Registration
-
-Other application pages require authentication.
-
-Administrator functionality is restricted to users with the `ADMIN` role.
-
-Normal users cannot access administrator functionality.
-
-Users are also restricted to operations on prompts that they own. For example, a user cannot edit or delete another user's private prompt simply by changing the prompt ID in the URL.
-
-Passwords are stored as BCrypt hashes.
-
-The application also uses CSRF protection for state-changing requests such as form submissions and logout.
+Registration input is validated before an account is created.
 
 ---
 
@@ -415,7 +407,7 @@ Login:
 /login-page
 ```
 
-Register:
+Registration:
 
 ```text
 /register-page
@@ -479,11 +471,13 @@ Flagged Prompts:
 /admin-flagged-prompts-page
 ```
 
+Administrator pages require an authenticated account with the `ADMIN` role.
+
 ---
 
 # Simulated AI
 
-The application does not contact an external AI service.
+PromptVault does not contact an external AI service.
 
 When a user submits one of their prompts, the application generates a simulated AI response.
 
@@ -492,62 +486,195 @@ If the prompt contains a configured policy keyword:
 - the user receives a warning
 - the prompt is flagged
 - the matched policy keyword is recorded
-- the flagged prompt becomes visible to the administrator
+- the flagged submission can be reviewed by an administrator
 
 Submission information is recorded in the user's submission history.
 
 ---
 
-# Security Notes
+# Security Controls
 
-PromptVault uses a number of security controls, including:
+PromptVault uses Spring Security for authentication, authorization and session management.
+
+Implemented security controls include:
 
 - Spring Security authentication
 - Role-based authorization
+- Administrator-only route protection
+- Server-side authenticated-principal identity
+- Prompt ownership checks
 - BCrypt password hashing
-- Environment variables for sensitive credentials
+- HTTPS/TLS
+- Secure session cookies
+- HttpOnly session cookies
+- SameSite session cookie protection
+- Cookie-only session tracking
+- Session fixation protection
+- Session invalidation on logout
 - CSRF protection
-- Session-based authentication
-- Ownership checks for user prompts
-- Restricted administrator endpoints
-- Disabled-account enforcement
+- Content Security Policy
+- Anti-clickjacking protection
+- MIME-sniffing protection
+- Input validation
+- Purpose-built request DTOs
+- Environment variables for sensitive configuration
+- Login rate limiting
+- Prompt submission rate limiting
+- Security audit logging
+- Request correlation IDs
+- Generic exception handling
+- Automated dependency scanning with Snyk
 
-Sensitive credentials such as the administrator password and database password should never be committed to the repository.
+Users cannot gain administrator privileges by supplying an administrator ID in a request.
+
+Users are also restricted to operations on prompts they own. Server-side ownership checks are used rather than trusting client-supplied ownership information.
+
+---
+
+# Session Security
+
+PromptVault uses session-based authentication.
+
+Session security includes:
+
+- HTTPS transport
+- `Secure` session cookies
+- `HttpOnly` session cookies
+- `SameSite=Lax`
+- cookie-only session tracking
+- session fixation protection
+- session invalidation during logout
+
+Session identifiers should never be placed in URLs, logs or documentation.
+
+---
+
+# Rate Limiting
+
+Rate limiting is implemented as an additional defence against automated abuse.
+
+Login rate limiting reduces repeated authentication attempts.
+
+Prompt submission rate limiting reduces excessive automated prompt submissions.
+
+When a configured limit is exceeded, the application rejects further requests until the rate-limit period has elapsed.
+
+---
+
+# Security Logging
+
+Security-relevant events are recorded through the application's security audit logging functionality.
+
+Examples include:
+
+- failed login attempts
+- rate-limited requests
+- flagged prompt submissions
+- unauthorized prompt-access attempts
+
+Sensitive values such as passwords, session identifiers, CSRF tokens and complete sensitive prompt contents are not intentionally written to security audit logs.
+
+Each HTTP request is also assigned a request correlation identifier.
+
+The identifier is returned using:
+
+```text
+X-Request-ID
+```
+
+This assists with correlating related application and security events.
+
+---
+
+# Dependency Security
+
+Project dependencies can be checked using Snyk.
+
+If Snyk CLI is installed and authenticated, run:
+
+```bash
+snyk test
+```
+
+The repository also contains a GitHub Actions workflow that performs automated dependency security scanning.
+
+The Snyk authentication token used by GitHub Actions must be stored as a GitHub repository secret and must not be committed to the repository.
+
+---
+
+# Local Development Secrets
+
+Real credentials must not be committed to Git.
+
+Files containing local credentials, such as a local startup script, should be listed in:
+
+```text
+.gitignore
+```
+
+For example:
+
+```gitignore
+run-local.sh
+```
+
+A local `run-local.sh` may be used to export development environment variables before starting the application, but the file must remain local if it contains real credentials.
+
+Example structure:
+
+```bash
+#!/bin/bash
+
+export DB_USER='YOUR_DB_USER'
+export DB_PASSWORD='YOUR_DB_PASSWORD'
+export PROMPTVAULT_ADMIN_USERNAME='admin'
+export PROMPTVAULT_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
+export KEYSTORE_PASSWORD='YOUR_KEYSTORE_PASSWORD'
+
+./mvnw spring-boot:run
+```
+
+Do not commit a version of this file containing real passwords.
 
 ---
 
 # Quick Start
 
-For a fresh installation, the basic process is:
+Clone the repository:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/prompt-vault.git
 
 cd prompt-vault
+```
 
+Create the database:
+
+```bash
 mysql -u root -p
 ```
 
-Inside MySQL:
+Then:
 
 ```sql
 CREATE DATABASE promptvault;
 EXIT;
 ```
 
-Then import the supplied database script:
+Import the supplied database:
 
 ```bash
 mysql -u root -p promptvault < database.sql
 ```
 
-Set the required environment variables:
+Configure the required environment variables:
 
 ```bash
 export DB_USER=root
 export DB_PASSWORD='YOUR_MYSQL_PASSWORD'
 export PROMPTVAULT_ADMIN_USERNAME=admin
 export PROMPTVAULT_ADMIN_PASSWORD='YOUR_ADMIN_PASSWORD'
+export KEYSTORE_PASSWORD='YOUR_KEYSTORE_PASSWORD'
 ```
 
 Run PromptVault:
@@ -559,7 +686,39 @@ Run PromptVault:
 Open:
 
 ```text
-http://localhost:8080
+https://localhost:8080
 ```
 
-The application is now ready to use.
+If the browser displays a certificate warning, this is expected when using the local development certificate.
+
+PromptVault is now ready to use.
+
+---
+
+# Security Testing
+
+The application was security tested using:
+
+- Snyk Open Source
+- Snyk Code
+- OWASP ZAP
+- Manual authorization and access-control testing
+
+The remediation report supplied with the project documents the identified vulnerabilities, implemented security controls, OWASP Top 10 mappings and final verification results.
+
+---
+
+# Important Security Notice
+
+This project is a coursework application intended for local development and security testing.
+
+Development credentials, local keystores and other secrets should not be treated as production credentials.
+
+For a production deployment, additional controls should be considered, including:
+
+- a publicly trusted TLS certificate
+- production-grade secret management
+- persistent/distributed rate limiting where required
+- centralized security log collection and alerting
+- multi-factor authentication for privileged accounts
+- production database and infrastructure hardening
