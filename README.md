@@ -692,33 +692,3 @@ https://localhost:8080
 If the browser displays a certificate warning, this is expected when using the local development certificate.
 
 PromptVault is now ready to use.
-
----
-
-# Security Testing
-
-The application was security tested using:
-
-- Snyk Open Source
-- Snyk Code
-- OWASP ZAP
-- Manual authorization and access-control testing
-
-The remediation report supplied with the project documents the identified vulnerabilities, implemented security controls, OWASP Top 10 mappings and final verification results.
-
----
-
-# Important Security Notice
-
-This project is a coursework application intended for local development and security testing.
-
-Development credentials, local keystores and other secrets should not be treated as production credentials.
-
-For a production deployment, additional controls should be considered, including:
-
-- a publicly trusted TLS certificate
-- production-grade secret management
-- persistent/distributed rate limiting where required
-- centralized security log collection and alerting
-- multi-factor authentication for privileged accounts
-- production database and infrastructure hardening
