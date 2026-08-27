@@ -12,6 +12,8 @@ application-local.properties
 logs/
 *.log
 
+*.p12
+
 ### STS ###
 .apt_generated
 .classpath

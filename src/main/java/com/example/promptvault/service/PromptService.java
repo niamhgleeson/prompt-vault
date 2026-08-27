@@ -5,7 +5,10 @@ import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.SubmissionHistory;
 import com.example.promptvault.model.User;
 import com.example.promptvault.repository.PromptRepository;
+import com.example.promptvault.repository.SubmissionHistoryRepository;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,13 +21,15 @@ public class PromptService {
     private final SubmissionHistoryService historyService;
     private final RateLimitService rateLimitService;
     private final SecurityAuditService securityAuditService;
+    private final SubmissionHistoryRepository historyRepository;
 
     public PromptService(
             PromptRepository promptRepository,
             PolicyKeywordService keywordService,
             SubmissionHistoryService historyService,
             RateLimitService rateLimitService,
-            SecurityAuditService securityAuditService
+            SecurityAuditService securityAuditService,
+            SubmissionHistoryRepository historyRepository
     ) {
 
         this.promptRepository =
@@ -41,6 +46,9 @@ public class PromptService {
 
         this.securityAuditService =
                 securityAuditService;
+
+        this.historyRepository =
+                historyRepository;
     }
 
     public Prompt createPrompt(
@@ -130,6 +138,7 @@ public class PromptService {
         );
     }
 
+    @Transactional
     public void deletePrompt(
             Long promptId,
             Long userId
@@ -165,6 +174,16 @@ public class PromptService {
                     "You can only delete your own prompts."
             );
         }
+
+        /*
+         * Delete dependent submission history first
+         * so the foreign key constraint does not
+         * prevent deletion of the prompt.
+         */
+        historyRepository
+                .deleteByPromptId(
+                        promptId
+                );
 
         promptRepository.delete(
                 existing
@@ -214,17 +233,10 @@ public class PromptService {
         /*
          * Rate limit prompt submissions.
          */
-        if (
-                !rateLimitService
-                        .allowPromptSubmission(
-                                userId
-                        )
+        if (!rateLimitService.allowPromptSubmission(userId)
         ) {
 
-            securityAuditService
-                    .promptRateLimited(
-                            userId
-                    );
+            securityAuditService.promptRateLimited(userId);
 
             throw new RateLimitExceededException(
                     "Too many prompt submissions. "
@@ -304,8 +316,7 @@ public class PromptService {
                                         )
                         );
 
-        if (
-                prompt.getOwner() == null ||
+        if (prompt.getOwner() == null ||
                         !prompt
                                 .getOwner()
                                 .getId()
@@ -326,7 +337,10 @@ public class PromptService {
         return prompt;
     }
 
-    public Prompt findById(Long id) {
+    public Prompt findById(
+            Long id
+    ) {
+
         return promptRepository
                 .findById(
                         id

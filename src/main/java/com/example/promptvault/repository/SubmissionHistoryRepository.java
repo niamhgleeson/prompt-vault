@@ -9,6 +9,8 @@ import java.util.*;
 public interface SubmissionHistoryRepository
         extends JpaRepository<SubmissionHistory, Long> {
 
+    void deleteByPromptId(Long promptId);
+
     List<SubmissionHistory>
     findByUserId(Long userId);
 

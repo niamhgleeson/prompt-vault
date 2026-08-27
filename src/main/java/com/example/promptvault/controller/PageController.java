@@ -1,6 +1,8 @@
 package com.example.promptvault.controller;
 
+import com.example.promptvault.dto.RegistrationRequest;
 import com.example.promptvault.exception.RateLimitExceededException;
+
 import com.example.promptvault.model.PolicyKeyword;
 import com.example.promptvault.model.Prompt;
 import com.example.promptvault.model.PromptCategory;
@@ -14,11 +16,18 @@ import com.example.promptvault.service.SecurityAuditService;
 import com.example.promptvault.service.SubmissionHistoryService;
 import com.example.promptvault.service.UserService;
 
+import jakarta.validation.Valid;
+
 import org.springframework.security.core.Authentication;
+
 import org.springframework.stereotype.Controller;
+
 import org.springframework.ui.Model;
 
+import org.springframework.validation.BindingResult;
+
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,11 +61,17 @@ public class PageController {
         this.securityAuditService = securityAuditService;
     }
 
+
+    // --------------------------------------------------
+    // HOME / LOGIN / REGISTER
+    // --------------------------------------------------
+
     @GetMapping("/")
     public String home() {
 
         return "login";
     }
+
 
     @GetMapping("/login-page")
     public String loginPage() {
@@ -64,11 +79,92 @@ public class PageController {
         return "login";
     }
 
+
     @GetMapping("/register-page")
-    public String registerPage() {
+    public String registerPage(
+            Model model
+    ) {
+
+        model.addAttribute(
+                "user",
+                new RegistrationRequest()
+        );
 
         return "register";
     }
+
+
+    @PostMapping("/register")
+    public String register(
+            @Valid
+            @ModelAttribute("user")
+            RegistrationRequest request,
+
+            BindingResult errors,
+
+            RedirectAttributes redirectAttributes
+    ) {
+
+        if (errors.hasErrors()) {
+
+            return "register";
+        }
+
+        try {
+
+            User user =
+                    new User();
+
+            user.setName(
+                    request.getName()
+            );
+
+            user.setSurname(
+                    request.getSurname()
+            );
+
+            user.setUsername(
+                    request.getUsername()
+            );
+
+            user.setEmail(
+                    request.getEmail()
+            );
+
+            user.setPassword(
+                    request.getPassword()
+            );
+
+            userService.register(
+                    user
+            );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Registration successful. "
+                                    + "You can now log in."
+                    );
+
+            return "redirect:/login-page";
+
+        } catch (RuntimeException e) {
+
+            /*
+             * Do not expose database or framework
+             * exception details to the user.
+             */
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Registration failed. "
+                                    + "Please check your details."
+                    );
+
+            return "redirect:/register-page";
+        }
+    }
+
 
     @GetMapping("/access-denied")
     public String accessDenied() {
@@ -76,17 +172,28 @@ public class PageController {
         return "access-denied";
     }
 
+
+    // --------------------------------------------------
+    // DASHBOARDS
+    // --------------------------------------------------
+
     @GetMapping("/user-dashboard")
     public String userDashboard() {
 
         return "user-dashboard";
     }
 
+
     @GetMapping("/admin-dashboard")
     public String adminDashboard() {
 
         return "admin-dashboard";
     }
+
+
+    // --------------------------------------------------
+    // USER PROMPTS
+    // --------------------------------------------------
 
     @GetMapping("/create-prompt-page")
     public String createPromptPage(
@@ -102,19 +209,31 @@ public class PageController {
         return "create-prompt";
     }
 
+
     @GetMapping("/user-prompts-page")
     public String userPromptsPage(
             Model model,
             Authentication authentication
     ) {
 
-        User user = userService.findByUsername(authentication.getName());
+        User user =
+                userService
+                        .findByUsername(
+                                authentication
+                                        .getName()
+                        );
 
-        model.addAttribute("prompts", promptService.getUserPrompts(user.getId())
+        model.addAttribute(
+                "prompts",
+                promptService
+                        .getUserPrompts(
+                                user.getId()
+                        )
         );
 
         return "user-prompts";
     }
+
 
     @GetMapping("/shared-prompts-page")
     public String sharedPromptsPage(
@@ -130,50 +249,6 @@ public class PageController {
         return "shared-prompts";
     }
 
-    @PostMapping("/register")
-    public String register(
-            @RequestParam String name,
-            @RequestParam String surname,
-            @RequestParam String username,
-            @RequestParam String email,
-            @RequestParam String password,
-            RedirectAttributes redirectAttributes
-    ) {
-
-        try {
-
-            User user =
-                    new User();
-
-            user.setName(name);
-            user.setSurname(surname);
-            user.setUsername(username);
-            user.setEmail(email);
-            user.setPassword(password);
-
-            userService.register(user);
-
-            redirectAttributes
-                    .addFlashAttribute(
-                            "message",
-                            "Registration successful. "
-                                    + "You can now log in."
-                    );
-
-            return "redirect:/login-page";
-
-        } catch (RuntimeException e) {
-
-            redirectAttributes
-                    .addFlashAttribute(
-                            "error",
-                            "Registration failed. "
-                                    + "Please check your details."
-                    );
-
-            return "redirect:/register-page";
-        }
-    }
 
     @PostMapping("/web/prompts")
     public String createPromptFromForm(
@@ -181,38 +256,70 @@ public class PageController {
             @RequestParam String promptText,
             @RequestParam String visibility,
             @RequestParam Long categoryId,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        User owner =
-                userService
-                        .findByUsername(
-                                authentication
-                                        .getName()
-                        );
+        try {
 
-        PromptCategory category =
-                promptCategoryService
-                        .findById(
-                                categoryId
-                        );
+            User owner =
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
-        Prompt prompt = new Prompt();
+            PromptCategory category =
+                    promptCategoryService
+                            .findById(
+                                    categoryId
+                            );
 
-        prompt.setTitle(title);
+            Prompt prompt =
+                    new Prompt();
 
-        prompt.setPromptText(promptText);
+            prompt.setTitle(
+                    title
+            );
 
-        prompt.setVisibility(visibility);
+            prompt.setPromptText(
+                    promptText
+            );
 
-        prompt.setOwner(owner);
+            prompt.setVisibility(
+                    visibility
+            );
 
-        prompt.setCategory(category);
+            prompt.setOwner(
+                    owner
+            );
 
-        promptService.createPrompt(prompt);
+            prompt.setCategory(
+                    category
+            );
+
+            promptService.createPrompt(
+                    prompt
+            );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Prompt created successfully."
+                    );
+
+        } catch (RuntimeException e) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to create the prompt."
+                    );
+        }
 
         return "redirect:/user-prompts-page";
     }
+
 
     @PostMapping(
             "/web/prompts/submit/{id}"
@@ -246,9 +353,7 @@ public class PageController {
                                     .getSimulatedResponse()
                     );
 
-            if (
-                    history.isFlagged()
-            ) {
+            if (history.isFlagged()) {
 
                 redirectAttributes
                         .addFlashAttribute(
@@ -275,8 +380,8 @@ public class PageController {
         ) {
 
             /*
-             * Friendly web-page response for
-             * rate-limited users.
+             * This message is safe because it is
+             * created by our own application.
              */
             redirectAttributes
                     .addFlashAttribute(
@@ -288,10 +393,14 @@ public class PageController {
                 RuntimeException e
         ) {
 
+            /*
+             * Never send raw exception details
+             * to the browser.
+             */
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to submit the prompt."
                     );
         }
 
@@ -336,7 +445,7 @@ public class PageController {
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to delete the prompt."
                     );
         }
 
@@ -387,10 +496,15 @@ public class PageController {
                 RuntimeException e
         ) {
 
+            /*
+             * Safe generic response also covers
+             * ownership violations without leaking
+             * whether a particular prompt exists.
+             */
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to access that prompt."
                     );
 
             return "redirect:/user-prompts-page";
@@ -465,13 +579,17 @@ public class PageController {
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to update the prompt."
                     );
         }
 
         return "redirect:/user-prompts-page";
     }
 
+
+    // --------------------------------------------------
+    // ADMIN - USERS
+    // --------------------------------------------------
 
     @GetMapping("/admin-users-page")
     public String adminUsersPage(
@@ -480,7 +598,8 @@ public class PageController {
 
         model.addAttribute(
                 "users",
-                userService.getAll()
+                userService
+                        .getAll()
         );
 
         return "admin-users";
@@ -524,7 +643,7 @@ public class PageController {
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to update the user account."
                     );
         }
 
@@ -569,13 +688,17 @@ public class PageController {
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to update the user account."
                     );
         }
 
         return "redirect:/admin-users-page";
     }
 
+
+    // --------------------------------------------------
+    // ADMIN - CATEGORIES
+    // --------------------------------------------------
 
     @GetMapping(
             "/admin-categories-page"
@@ -598,40 +721,60 @@ public class PageController {
     public String createCategoryFromPage(
             @RequestParam String name,
             @RequestParam String description,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        User admin =
-                userService
-                        .findByUsername(
-                                authentication
-                                        .getName()
-                        );
+        try {
 
-        PromptCategory category =
-                new PromptCategory();
+            User admin =
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
-        category.setName(
-                name
-        );
+            PromptCategory category =
+                    new PromptCategory();
 
-        category.setDescription(
-                description
-        );
+            category.setName(
+                    name
+            );
 
-        promptCategoryService
-                .create(
-                        category,
-                        admin
-                );
+            category.setDescription(
+                    description
+            );
 
-        securityAuditService
-                .categoryChanged(
-                        authentication
-                                .getName(),
-                        category.getId(),
-                        "CREATE"
-                );
+            promptCategoryService
+                    .create(
+                            category,
+                            admin
+                    );
+
+            securityAuditService
+                    .categoryChanged(
+                            authentication
+                                    .getName(),
+                            category.getId(),
+                            "CREATE"
+                    );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Category created successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to create the category."
+                    );
+        }
 
         return "redirect:/admin-categories-page";
     }
@@ -671,10 +814,15 @@ public class PageController {
                 RuntimeException e
         ) {
 
+            /*
+             * Do not reveal foreign-key names,
+             * SQL or database table names.
+             */
             redirectAttributes
                     .addFlashAttribute(
                             "error",
-                            e.getMessage()
+                            "Unable to delete the category. "
+                                    + "It may still be in use."
                     );
         }
 
@@ -687,21 +835,37 @@ public class PageController {
     )
     public String editCategoryPage(
             @PathVariable Long id,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
 
-        PromptCategory category =
-                promptCategoryService
-                        .findById(
-                                id
-                        );
+        try {
 
-        model.addAttribute(
-                "category",
-                category
-        );
+            PromptCategory category =
+                    promptCategoryService
+                            .findById(
+                                    id
+                            );
 
-        return "edit-category";
+            model.addAttribute(
+                    "category",
+                    category
+            );
+
+            return "edit-category";
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to access that category."
+                    );
+
+            return "redirect:/admin-categories-page";
+        }
     }
 
 
@@ -712,37 +876,61 @@ public class PageController {
             @PathVariable Long id,
             @RequestParam String name,
             @RequestParam String description,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        PromptCategory category =
-                new PromptCategory();
+        try {
 
-        category.setName(
-                name
-        );
+            PromptCategory category =
+                    new PromptCategory();
 
-        category.setDescription(
-                description
-        );
+            category.setName(
+                    name
+            );
 
-        promptCategoryService
-                .update(
-                        id,
-                        category
-                );
+            category.setDescription(
+                    description
+            );
 
-        securityAuditService
-                .categoryChanged(
-                        authentication
-                                .getName(),
-                        id,
-                        "UPDATE"
-                );
+            promptCategoryService
+                    .update(
+                            id,
+                            category
+                    );
+
+            securityAuditService
+                    .categoryChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            "UPDATE"
+                    );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Category updated successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to update the category."
+                    );
+        }
 
         return "redirect:/admin-categories-page";
     }
 
+
+    // --------------------------------------------------
+    // ADMIN - POLICY KEYWORDS
+    // --------------------------------------------------
 
     @GetMapping(
             "/admin-keywords-page"
@@ -764,36 +952,56 @@ public class PageController {
     @PostMapping("/web/keywords")
     public String createKeyword(
             @RequestParam String keyword,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        User admin =
-                userService
-                        .findByUsername(
-                                authentication
-                                        .getName()
-                        );
+        try {
 
-        PolicyKeyword policyKeyword =
-                new PolicyKeyword();
+            User admin =
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
-        policyKeyword.setKeyword(
-                keyword
-        );
+            PolicyKeyword policyKeyword =
+                    new PolicyKeyword();
 
-        policyKeywordService
-                .create(
-                        policyKeyword,
-                        admin
-                );
+            policyKeyword.setKeyword(
+                    keyword
+            );
 
-        securityAuditService
-                .keywordChanged(
-                        authentication
-                                .getName(),
-                        policyKeyword.getId(),
-                        "CREATE"
-                );
+            policyKeywordService
+                    .create(
+                            policyKeyword,
+                            admin
+                    );
+
+            securityAuditService
+                    .keywordChanged(
+                            authentication
+                                    .getName(),
+                            policyKeyword.getId(),
+                            "CREATE"
+                    );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Keyword created successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to create the keyword."
+                    );
+        }
 
         return "redirect:/admin-keywords-page";
     }
@@ -804,21 +1012,41 @@ public class PageController {
     )
     public String deleteKeyword(
             @PathVariable Long id,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        policyKeywordService
-                .delete(
-                        id
-                );
+        try {
 
-        securityAuditService
-                .keywordChanged(
-                        authentication
-                                .getName(),
-                        id,
-                        "DELETE"
-                );
+            policyKeywordService
+                    .delete(
+                            id
+                    );
+
+            securityAuditService
+                    .keywordChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            "DELETE"
+                    );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Keyword deleted successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to delete the keyword."
+                    );
+        }
 
         return "redirect:/admin-keywords-page";
     }
@@ -829,21 +1057,37 @@ public class PageController {
     )
     public String editKeywordPage(
             @PathVariable Long id,
-            Model model
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
 
-        PolicyKeyword keyword =
-                policyKeywordService
-                        .findById(
-                                id
-                        );
+        try {
 
-        model.addAttribute(
-                "keyword",
-                keyword
-        );
+            PolicyKeyword keyword =
+                    policyKeywordService
+                            .findById(
+                                    id
+                            );
 
-        return "admin-keyword-edit";
+            model.addAttribute(
+                    "keyword",
+                    keyword
+            );
+
+            return "admin-keyword-edit";
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to access that keyword."
+                    );
+
+            return "redirect:/admin-keywords-page";
+        }
     }
 
 
@@ -853,34 +1097,58 @@ public class PageController {
     public String editKeywordFromPage(
             @PathVariable Long id,
             @RequestParam String keyword,
-            Authentication authentication
+            Authentication authentication,
+            RedirectAttributes redirectAttributes
     ) {
 
-        User admin =
-                userService
-                        .findByUsername(
-                                authentication
-                                        .getName()
-                        );
+        try {
 
-        policyKeywordService
-                .update(
-                        id,
-                        keyword,
-                        admin
-                );
+            User admin =
+                    userService
+                            .findByUsername(
+                                    authentication
+                                            .getName()
+                            );
 
-        securityAuditService
-                .keywordChanged(
-                        authentication
-                                .getName(),
-                        id,
-                        "UPDATE"
-                );
+            policyKeywordService
+                    .update(
+                            id,
+                            keyword,
+                            admin
+                    );
+
+            securityAuditService
+                    .keywordChanged(
+                            authentication
+                                    .getName(),
+                            id,
+                            "UPDATE"
+                    );
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "message",
+                            "Keyword updated successfully."
+                    );
+
+        } catch (
+                RuntimeException e
+        ) {
+
+            redirectAttributes
+                    .addFlashAttribute(
+                            "error",
+                            "Unable to update the keyword."
+                    );
+        }
 
         return "redirect:/admin-keywords-page";
     }
 
+
+    // --------------------------------------------------
+    // HISTORY
+    // --------------------------------------------------
 
     @GetMapping("/user-history-page")
     public String userHistoryPage(
